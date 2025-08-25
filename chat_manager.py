@@ -9,10 +9,12 @@ class ChatManager:
     def __init__(self, bot, users_file="users.json"):
         self.users_file = users_file
         self.users = self.load_users()
+        print('users',self.users)
         self.current_user = None
         self.state = "ASK_EMAIL"   # máquina de estados
         self.buffer = {}
         self.tutor=bot
+        self.name="ChatManager"
 
     # ======================
     # Utils
@@ -51,7 +53,7 @@ class ChatManager:
         elif self.state == "ASK_PASSWORD":
             pwd = self.hash_password(msg.strip())
             email = self.buffer["email"]
-            if self.users[email] == pwd:
+            if self.users[email]["hash"] == pwd:
                 self.current_user = email
                 #self.state = "AUTH_OK"
                 return self.auth_ok(f"✅ Bienvenido de nuevo, {email}")#.\nAhora puedes elegir un bot."
@@ -61,7 +63,7 @@ class ChatManager:
         elif self.state == "REGISTER_PASSWORD":
             pwd = self.hash_password(msg.strip())
             email = self.buffer["email"]
-            self.users[email] = pwd
+            self.users[email]={"hash" : pwd}
             self.save_users()
             self.current_user = email
             return self.auth_ok(f"🎉 Usuario {email} registrado con éxito.\n")

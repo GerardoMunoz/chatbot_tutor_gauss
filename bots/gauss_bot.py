@@ -59,6 +59,7 @@ class GaussBot:
         self._gen = self._run()
         self.salutation=next(self._gen)
         self.first_rowcol=first_rowcol
+        self.name="GaussBot"
 
     def ask(self, text: str):
         return self._gen.send(text)
@@ -313,6 +314,7 @@ class GaussBot:
 
         while self.repetir:
             self.output('------------------------------------------')
+            self.output(C)
             operacion=yield self.get_output(self.msg_op_prompt)
             operacion = operacion.strip().lower()            
             #operacion = self.input(self.msg_op_prompt)
@@ -326,7 +328,7 @@ class GaussBot:
                         # self.autoupdate = False
                     # self.output(f"autoupdate = {self.autoupdate}")
                     # continue
-                if operacion=="%update":
+                if operacion in ["%update", "%up"]:
                     C = B
                     continue
                 if operacion == '%salir':
@@ -334,7 +336,7 @@ class GaussBot:
                     self.output(self.msg_exit)
                     continue
                 if operacion=='%sugerir':
-                    self._dar_sugerencia(A)
+                    self._dar_sugerencia(C)
                     continue
                 if operacion=='%ayuda':
                     self.output(self.msg_help)
@@ -351,38 +353,39 @@ class GaussBot:
                 self.sugerencia = 0
                 D = C - B
                 if bool(D):
-                    self.output(self.msg_matrix_changed)
+                    #self.output(f"{self.msg_matrix_changed} [+1]")
                     (Bij, Bceros, Bdiv, Babajo, Bi, Bj, Bmax) = self.califica_matriz(B)
                     (Cij, Cceros, Cdiv, Cabajo, Ci, Cj, Cmax) = self.califica_matriz(C)
+
                     if Bi == Am - 1 or Bj == An - 1:
                         self.repetir = False
-                        self.output(self.msg_congratulations)
+                        self.output(f"{self.msg_congratulations} !!!SCORE[+5]")
                     elif Bj > Cj:
-                        self.output(self.msg_advanced_column)
+                        self.output(f"{self.msg_advanced_column} !!!SCORE[+2]")
                     elif Bj < Cj:
-                        self.output(self.msg_lost_column)
+                        self.output(f"{self.msg_lost_column} !!!SCORE[-2]")
                     else:
                         if (not bool(Cij)) and bool(Bij):
-                            self.output(self.msg_pivot_nonzero(Bi, Bj))
-                            #print('DEBUG msg_pivot_max:', Cij, Cmax, Bij, Bmax)
-                            if (Bij>=Bmax):
-                              self.output(self.msg_pivot_max)
-                        elif (not bool(Bij)) and bool(Bij):
-                            self.output(self.msg_pivot_zero(Bi, Bj))
+                            self.output(f"{self.msg_pivot_nonzero(Bi, Bj)} !!!SCORE[+3]")
+                            if (Bij >= Bmax):
+                                self.output(f"{self.msg_pivot_max} !!!SCORE[+1]")
+                        elif bool(Cij) and (not bool(Bij)):  
+                            self.output(f"{self.msg_pivot_zero(Bi, Bj)} !!!SCORE[-3]")
                         else:
                             if Bceros > Cceros:
-                                self.output(self.msg_more_zeros)
+                                self.output(f"{self.msg_more_zeros} !!!SCORE[+1]")
                             elif Bceros < Cceros:
-                                self.output(self.msg_less_zeros)
+                                self.output(f"{self.msg_less_zeros} !!!SCORE[-1]")
                             else:
                                 if Cdiv > 0:
-                                    self.output(self.msg_possible_zero)
+                                    self.output(f"{self.msg_possible_zero} !!!SCORE[+0]")
                                 elif Bdiv > 0:
-                                    self.output(self.msg_pivot_divisor)
+                                    self.output(f"{self.msg_pivot_divisor} !!!SCORE[+1]")
                                 else:
-                                    self.output(self.msg_no_understand_op)
+                                    self.output(f"{self.msg_no_understand_op} !!!SCORE[0]")
                 else:
-                    self.output(self.msg_matrix_not_changed)
+                    self.output(f"{self.msg_matrix_not_changed} !!!SCORE[0]")
+
             except ValueError as e:
                     self.output(self.msg_unknown_op(e))
 

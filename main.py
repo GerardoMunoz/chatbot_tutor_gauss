@@ -15,6 +15,60 @@ chatbots = {}            # { ws: ChatManager }
 tutor=GaussBot(autoupdate=False,newline=newline)
 history_global=tutor.salutation
 
+import re
+from datetime import datetime
+import json, os
+
+USERS_FILE = "users.json"
+
+import re
+
+def extraer_todas_calificaciones(msg: str):
+    """Find all !!!SCORE[+N] markers and return as list of ints."""
+    return [int(x) for x in re.findall(r'!!!SCORE\[([-+]?\d+)\]', msg)]
+
+
+# def extraer_calificacion(msg: str):
+    # """
+    # Busca un marcador especial del tipo <<<SCORE[+N]>>> dentro del mensaje.
+    # Devuelve el número o None si no hay.
+    # """
+    # m = re.search(r'!!!SCORE\[([-+]?\d+)\]', msg)
+    # if m:
+        # return int(m.group(1))
+    # return None
+
+
+# def separar_texto_calificacion(msg: str):
+    # m = re.search(r'\[([-+]?\d+)\]\s*$', msg.strip())
+    # if m:
+        # calificacion = int(m.group(1))
+        # texto = msg[:m.start()].strip()
+        # return texto, calificacion
+    # else:
+        # return msg.strip(), None
+
+def guardar_calificacion(email: str, score: int):
+    if os.path.exists(USERS_FILE):
+        with open(USERS_FILE, "r", encoding="utf-8") as f:
+            users = json.load(f)
+    else:
+        users = {}
+
+    if email not in users:
+        users[email] = {}
+    if "scores" not in users[email]:
+        users[email]["scores"] = []
+
+    users[email]["scores"].append({
+        "timestamp": datetime.now().isoformat(timespec="seconds"),
+        "score": score
+    })
+
+    with open(USERS_FILE, "w", encoding="utf-8") as f:
+        json.dump(users, f, indent=2, ensure_ascii=False)
+
+
 @app.websocket("/ws_chat")
 async def websocket_chat(ws: WebSocket):
     global history_global
@@ -56,12 +110,28 @@ async def websocket_chat(ws: WebSocket):
                     email = user_sessions[ws]
                     mensaje = f"{email}: {text}"
                     history_global+=mensaje+newline
+                    
+                    # 👉 Separar calificación y guardar solo si existe
+                    #_, score = separar_texto_calificacion(mensaje)
+                    #print('msg',mensaje,score)
+                    #if score is not None:
+                    #    guardar_calificacion(email, score)
+                                
+                    
                     for conn in connections:
-                        await conn.send_text(json.dumps({"scope": "global", "text": mensaje, "bot":False}))
+                        await conn.send_text(json.dumps({"scope": "global", "text": mensaje, "from":email}))
                     respuesta = bot.ask(text)   
+                    
+                    # 👉 Separar calificación y guardar solo si existe
+                    score = extraer_calificacion(respuesta)
+                    print('msg',respuesta,score)
+                    if score is not None:
+                        guardar_calificacion(email, score)
+
+
                     history_global+=respuesta+newline                    
                     for conn in connections:
-                        await conn.send_text(json.dumps({"scope": "global", "text": respuesta, "bot":True}))
+                        await conn.send_text(json.dumps({"scope": "global", "text": respuesta, "from":bot.name}))
                          
 
     except WebSocketDisconnect:
